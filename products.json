@@ -1,0 +1,39 @@
+{
+  "_comment": "You normally won't edit this by hand — use the 'Track something new' panel on the dashboard. Colours have separate product pages, so each entry below is one specific colour.",
+  "currency": "CAD",
+  "products": [
+    {
+      "id": "macbook-air-13-m5-16-512",
+      "name": "MacBook Air 13\" M5 · 8-core GPU · 16GB · 512GB",
+      "target_price": 1299.00,
+      "notes": "Apple list price $1,499 CAD. Midnight chosen where a colour was required.",
+      "sources": [
+        {
+          "retailer": "Apple Canada",
+          "url": "https://www.apple.com/ca/shop/buy-mac/macbook-air/13-inch-midnight-m5-chip-10-core-cpu-8-core-gpu-16gb-memory-512gb-storage",
+          "method": "jsonld"
+        },
+        {
+          "retailer": "Best Buy Canada",
+          "url": "https://www.bestbuy.ca/en-ca/product/apple-macbook-air-13-6-w-touch-id-2026-midnight-apple-m5-16gb-ram-512gb-ssd-english/19791103",
+          "method": "bestbuy_ca"
+        },
+        {
+          "retailer": "Staples Canada",
+          "url": "https://www.staples.ca/products/3166295-en-apple-macbook-air-13-m5-10-core-cpu-512-gb-ssd-16-gb-unified-memory-midnight",
+          "method": "jsonld"
+        },
+        {
+          "retailer": "Amazon.ca",
+          "url": "https://www.amazon.ca/Apple-MacBook-13-inch-10-core-Unified/dp/B0GR1JTFP8",
+          "method": "jsonld"
+        },
+        {
+          "retailer": "Costco Canada",
+          "url": "https://www.costco.ca/p/-/apple-macbook-air-136-in-apple-m5-chip-16-gb-ram-512-gb-ssd/4000411508",
+          "method": "manual"
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,99 @@
+name: Add item
+
+# When the dashboard files an "Add item" request, this reads it, adds the product
+# to products.json, and immediately fetches a first round of prices.
+
+on:
+  issues:
+    types: [opened]
+
+permissions:
+  contents: write
+  issues: write
+
+jobs:
+  add:
+    if: contains(github.event.issue.body, '<!-- price-watch-add -->')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Read the request
+        id: parse
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const body = context.payload.issue.body || '';
+
+            const block = body.match(/```json\s*([\s\S]*?)```/);
+            if (!block) {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner, repo: context.repo.repo,
+                issue_number: context.issue.number,
+                body: "I couldn't find the item details in this issue. Use the **Add an item** panel on the dashboard, which fills them in for you."
+              });
+              core.setOutput('ok', 'false');
+              return;
+            }
+
+            let incoming;
+            try {
+              incoming = JSON.parse(block[1]);
+            } catch (e) {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner, repo: context.repo.repo,
+                issue_number: context.issue.number,
+                body: `The item details couldn't be read: ${e.message}\n\nTry adding it again from the dashboard.`
+              });
+              core.setOutput('ok', 'false');
+              return;
+            }
+
+            const config = JSON.parse(fs.readFileSync('products.json', 'utf8'));
+
+            // Reuse the id if it's already tracked, so this edits instead of duplicating
+            const existing = config.products.findIndex(p => p.id === incoming.id);
+            const verb = existing >= 0 ? 'Updated' : 'Now tracking';
+            if (existing >= 0) config.products[existing] = incoming;
+            else config.products.push(incoming);
+
+            fs.writeFileSync('products.json', JSON.stringify(config, null, 2) + '\n');
+
+            const stores = incoming.sources.map(s =>
+              `- ${s.retailer}${s.method === 'manual' ? ' — you enter this one by hand' : ''}`
+            ).join('\n');
+
+            core.setOutput('ok', 'true');
+            core.setOutput('summary',
+              `**${verb}: ${incoming.name}**\n\n` +
+              (incoming.target_price ? `Target: $${incoming.target_price}\n\n` : '') +
+              `Stores:\n${stores}\n\nChecking prices now — the dashboard updates in a minute or two.`);
+
+      - name: Save and check prices
+        if: steps.parse.outputs.ok == 'true'
+        run: |
+          pip install requests beautifulsoup4
+          python tracker.py || true
+          git config user.name "price-tracker"
+          git config user.email "actions@github.com"
+          git add products.json data/
+          git commit -m "Add ${{ github.event.issue.title }}"
+          git push
+
+      - name: Confirm and close
+        if: steps.parse.outputs.ok == 'true'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            await github.rest.issues.createComment({
+              owner: context.repo.owner, repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body: process.env.SUMMARY
+            });
+            await github.rest.issues.update({
+              owner: context.repo.owner, repo: context.repo.repo,
+              issue_number: context.issue.number, state: 'closed'
+            });
+        env:
+          SUMMARY: ${{ steps.parse.outputs.summary }}

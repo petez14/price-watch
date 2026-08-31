@@ -1,0 +1,542 @@
+<!DOCTYPE html>
+<html lang="en-CA">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Price Watch — Canada</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;700;800&family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<style>
+:root{
+  --bg:#e9ebef; --panel:#fdfdfc; --ink:#14181f; --muted:#69738a;
+  --line:#d3d8e0; --indigo:#2f3a8c; --down:#0e6f52; --up:#9c3524;
+  --shadow:0 1px 2px rgba(20,24,31,.06), 0 8px 24px -12px rgba(20,24,31,.18);
+  --r:10px;
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{
+  background:var(--bg); color:var(--ink);
+  font-family:"IBM Plex Sans",system-ui,sans-serif; font-size:15px; line-height:1.5;
+  -webkit-font-smoothing:antialiased;
+}
+.wrap{max-width:1060px;margin:0 auto;padding:28px 20px 72px}
+.mono{font-family:"IBM Plex Mono",ui-monospace,monospace;font-variant-numeric:tabular-nums}
+
+/* ---- masthead ---- */
+.masthead{display:flex;align-items:baseline;gap:16px;flex-wrap:wrap;
+  border-bottom:2px solid var(--ink);padding-bottom:12px;margin-bottom:24px}
+.wordmark{font-family:Archivo,sans-serif;font-weight:800;font-size:26px;
+  letter-spacing:-.03em;margin:0}
+.wordmark span{color:var(--indigo)}
+.stamp{margin-left:auto;font-size:12px;color:var(--muted);letter-spacing:.04em;
+  text-transform:uppercase}
+select{font-family:inherit;font-size:14px;padding:6px 10px;border:1px solid var(--line);
+  border-radius:6px;background:var(--panel);color:var(--ink);max-width:100%}
+
+/* ---- cards ---- */
+.card{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);
+  box-shadow:var(--shadow);padding:20px;margin-bottom:18px}
+.eyebrow{font-size:11px;letter-spacing:.11em;text-transform:uppercase;
+  color:var(--muted);font-weight:600;margin:0 0 12px}
+
+.headline{display:grid;grid-template-columns:minmax(190px,auto) 1fr;gap:28px;align-items:center}
+@media(max-width:680px){.headline{grid-template-columns:1fr;gap:22px}}
+.big{font-family:Archivo,sans-serif;font-weight:800;font-size:clamp(38px,7vw,54px);
+  letter-spacing:-.035em;line-height:1;font-variant-numeric:tabular-nums}
+.where{font-size:14px;color:var(--muted);margin-top:6px}
+.delta{display:inline-block;font-size:13px;font-weight:600;padding:2px 7px;
+  border-radius:4px;margin-top:8px}
+.delta.dn{color:var(--down);background:#0e6f5214}
+.delta.up{color:var(--up);background:#9c352414}
+.delta.flat{color:var(--muted);background:#69738a14}
+
+/* ---- signature: the spread strip ---- */
+.strip{padding-top:4px}
+.rail{position:relative;height:96px;margin:18px 0 6px}
+.rail::before{content:"";position:absolute;left:0;right:0;top:46px;height:2px;
+  background:var(--line)}
+.tick{position:absolute;top:0;left:0;width:0;height:100%}
+.tick i,.tick b,.tick em{position:absolute;left:0;transform:translateX(-50%);
+  white-space:nowrap}
+.tick.at-start b,.tick.at-start em{transform:translateX(-12%)}
+.tick.at-end b,.tick.at-end em{transform:translateX(-88%)}
+.tick i{top:38px;width:2px;height:18px;background:var(--muted)}
+.tick b{font-family:"IBM Plex Mono",monospace;font-size:12.5px;font-weight:600}
+.tick em{font-style:normal;font-size:10px;color:var(--muted);letter-spacing:.03em}
+.tick[data-lane="0"] em{top:20px} .tick[data-lane="0"] b{top:60px}
+.tick[data-lane="1"] em{top:2px}  .tick[data-lane="1"] b{top:78px}
+.tick[data-lane="1"] i{top:34px;height:26px}
+.tick.best i{background:var(--indigo);width:3px}
+.tick.best b{color:var(--indigo)}
+.tick.best em{color:var(--indigo);font-weight:600}
+.spread-note{font-size:13px;color:var(--muted)}
+.spread-note strong{color:var(--ink);font-weight:600}
+
+/* ---- chart ---- */
+.chart-box{position:relative;height:330px}
+@media(max-width:680px){.chart-box{height:260px}}
+.range{display:flex;gap:6px;margin-left:auto}
+.range button{font:inherit;font-size:12px;padding:4px 11px;border:1px solid var(--line);
+  background:transparent;border-radius:999px;cursor:pointer;color:var(--muted)}
+.range button[aria-pressed=true]{background:var(--indigo);border-color:var(--indigo);
+  color:#fff;font-weight:600}
+.card-head{display:flex;align-items:center;gap:12px;margin-bottom:14px;flex-wrap:wrap}
+.card-head .eyebrow{margin:0}
+
+/* ---- table ---- */
+table{width:100%;border-collapse:collapse;font-size:14px}
+th{text-align:left;font-size:11px;letter-spacing:.09em;text-transform:uppercase;
+  color:var(--muted);font-weight:600;padding:0 10px 9px;border-bottom:1px solid var(--line)}
+th.num,td.num{text-align:right}
+td{padding:12px 10px;border-bottom:1px solid var(--line)}
+tr:last-child td{border-bottom:0}
+tr.is-best td{background:#2f3a8c08}
+td a{color:var(--ink);text-decoration:none;border-bottom:1px solid var(--line)}
+td a:hover{color:var(--indigo);border-color:var(--indigo)}
+.flag{font-size:10px;font-weight:700;color:var(--indigo);letter-spacing:.06em;
+  margin-left:7px;vertical-align:1px}
+.stale{color:var(--muted);font-size:12px}
+
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:2px;
+  background:var(--line);border-radius:var(--r);overflow:hidden}
+.stat{background:var(--panel);padding:14px 16px}
+.stat dt{font-size:11px;letter-spacing:.09em;text-transform:uppercase;color:var(--muted);
+  font-weight:600;margin:0 0 5px}
+.stat dd{margin:0;font-family:"IBM Plex Mono",monospace;font-size:19px;font-weight:600;
+  font-variant-numeric:tabular-nums}
+
+.empty{text-align:center;padding:52px 20px}
+
+/* ---- add an item ---- */
+.adder summary{cursor:pointer;list-style:none;font-size:11px;letter-spacing:.11em;
+  text-transform:uppercase;color:var(--muted);font-weight:600;display:flex;
+  align-items:center;gap:9px}
+.adder summary::-webkit-details-marker{display:none}
+.adder summary::before{content:"+";font-size:16px;line-height:1;color:var(--indigo);
+  transition:transform .2s}
+.adder[open] summary::before{transform:rotate(45deg)}
+.form{display:grid;gap:14px;margin-top:18px;max-width:620px}
+.row{display:grid;grid-template-columns:1fr 150px;gap:14px}
+@media(max-width:560px){.row{grid-template-columns:1fr}}
+.field label{display:block;font-size:12px;font-weight:600;margin-bottom:5px}
+.field .hint{font-weight:400;color:var(--muted)}
+input[type=text],input[type=number],textarea{width:100%;font-family:inherit;font-size:14px;
+  padding:9px 11px;border:1px solid var(--line);border-radius:6px;background:#fff;
+  color:var(--ink)}
+textarea{font-family:"IBM Plex Mono",monospace;font-size:12.5px;min-height:96px;resize:vertical}
+.detected{display:flex;flex-wrap:wrap;gap:6px;min-height:4px}
+.chip{font-size:12px;padding:3px 9px;border-radius:999px;background:#2f3a8c12;
+  color:var(--indigo);font-weight:500}
+.chip.hand{background:#9c352412;color:var(--up)}
+.chip.bad{background:#69738a14;color:var(--muted)}
+.actions{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.btn{font:inherit;font-size:14px;font-weight:600;padding:9px 18px;border-radius:6px;
+  border:1px solid var(--indigo);background:var(--indigo);color:#fff;cursor:pointer;
+  text-decoration:none;display:inline-block}
+.btn[aria-disabled=true]{opacity:.4;pointer-events:none}
+.btn.ghost{background:transparent;color:var(--indigo)}
+.said{font-size:13px;color:var(--down);font-weight:500}
+.empty h2{font-family:Archivo,sans-serif;font-size:21px;margin:0 0 8px;letter-spacing:-.02em}
+.empty p{color:var(--muted);max-width:44ch;margin:0 auto}
+code{font-family:"IBM Plex Mono",monospace;font-size:.9em;background:#69738a14;
+  padding:1px 5px;border-radius:4px}
+:focus-visible{outline:2px solid var(--indigo);outline-offset:2px}
+
+@keyframes rise{from{opacity:0;transform:translate(-50%,10px)}to{opacity:1;transform:translate(-50%,0)}}
+.tick{animation:rise .45s cubic-bezier(.2,.7,.3,1) backwards}
+@media(prefers-reduced-motion:reduce){.tick{animation:none}}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="masthead">
+    <h1 class="wordmark">Price<span>Watch</span></h1>
+    <select id="picker" aria-label="Choose product"></select>
+    <div class="stamp" id="stamp"></div>
+  </header>
+
+  <main id="view"></main>
+
+  <details class="card adder">
+    <summary>Track something new</summary>
+    <div class="form">
+      <div class="row">
+        <div class="field">
+          <label for="f-name">What is it?</label>
+          <input type="text" id="f-name" placeholder="MacBook Air 13&quot; M5 16GB 512GB">
+        </div>
+        <div class="field">
+          <label for="f-target">Buy at <span class="hint">optional</span></label>
+          <input type="number" id="f-target" placeholder="1299" step="0.01" min="0">
+        </div>
+      </div>
+      <div class="field">
+        <label for="f-urls">Product links <span class="hint">— one per line, straight from the address bar</span></label>
+        <textarea id="f-urls" spellcheck="false"
+          placeholder="https://www.bestbuy.ca/en-ca/product/.../19791103&#10;https://www.costco.ca/p/-/....html"></textarea>
+      </div>
+      <div class="detected" id="f-detected"></div>
+      <div class="actions">
+        <a class="btn" id="f-go" aria-disabled="true" target="_blank" rel="noopener">Add it</a>
+        <button class="btn ghost" id="f-copy" type="button">Copy details instead</button>
+        <span class="said" id="f-said"></span>
+      </div>
+      <p class="stale" id="f-note">Opens a request on GitHub. Press <strong>Create</strong> there and
+      it starts tracking within a couple of minutes.</p>
+    </div>
+  </details>
+</div>
+
+<script>
+const CAD = n => '$' + Number(n).toLocaleString('en-CA',{minimumFractionDigits:2, maximumFractionDigits:2});
+const SERIES_COLORS = ['#2f3a8c','#0e6f52','#9c3524','#7a5c1e','#5b3a7e','#1c6a80','#8a4b6b'];
+
+let history = [], products = [], current = null, chart = null, days = 90;
+
+function parseCSV(text){
+  const lines = text.trim().split(/\r?\n/);
+  if (lines.length < 2) return [];
+  const cols = lines[0].split(',');
+  return lines.slice(1).map(line => {
+    // fields are simple (no embedded commas) but be tolerant of quotes
+    const cells = line.match(/("([^"]|"")*"|[^,]*)/g).filter((_,i)=>i%2===0);
+    return Object.fromEntries(cols.map((c,i)=>[c,(cells[i]||'').replace(/^"|"$/g,'')]));
+  }).filter(r => r.product_id);
+}
+
+async function boot(){
+  try {
+    const [h, l] = await Promise.all([
+      fetch('data/history.csv?' + Date.now()).then(r => r.ok ? r.text() : ''),
+      fetch('data/latest.json?' + Date.now()).then(r => r.ok ? r.json() : []).catch(()=>[])
+    ]);
+    history = parseCSV(h);
+    products = l;
+  } catch(e){ history = []; products = []; }
+
+  if (!history.length){
+    document.getElementById('view').innerHTML = `
+      <div class="card empty">
+        <h2>No prices logged yet</h2>
+        <p>Add your product links to <code>products.json</code>, then open the
+        <strong>Actions</strong> tab and press <strong>Run workflow</strong>.
+        The first prices land here a minute later.</p>
+      </div>`;
+    return;
+  }
+
+  const ids = [...new Set(history.map(r => r.product_id))];
+  const picker = document.getElementById('picker');
+  picker.innerHTML = ids.map(id => {
+    const named = products.find(p => p.id === id);
+    return `<option value="${id}">${named ? named.name : id}</option>`;
+  }).join('');
+  picker.onchange = () => { current = picker.value; render(); };
+  current = ids[0];
+
+  const last = history[history.length-1].timestamp;
+  document.getElementById('stamp').textContent =
+    'Updated ' + new Date(last).toLocaleString('en-CA',{dateStyle:'medium',timeStyle:'short'});
+
+  render();
+}
+
+function render(){
+  const rows = history.filter(r => r.product_id === current && r.price);
+  const meta = products.find(p => p.id === current);
+  const target = meta && meta.target_price ? Number(meta.target_price) : null;
+
+  // newest reading per store
+  const byStore = new Map();
+  for (const r of rows){
+    const list = byStore.get(r.retailer) || [];
+    list.push({ t: new Date(r.timestamp), price: +r.price, url: r.url, stock: r.in_stock });
+    byStore.set(r.retailer, list);
+  }
+  const stores = [...byStore.entries()].map(([name, pts]) => {
+    pts.sort((a,b)=>a.t-b.t);
+    const now = pts[pts.length-1], prev = pts.length>1 ? pts[pts.length-2] : null;
+    const recent = pts.filter(p => p.t > Date.now()-30*864e5);
+    return {
+      name, now: now.price, url: now.url, stock: now.stock, points: pts,
+      change: prev ? +(now.price - prev.price).toFixed(2) : null,
+      low30: recent.length ? Math.min(...recent.map(p=>p.price)) : null,
+      lowAll: Math.min(...pts.map(p=>p.price)),
+      seenAt: now.t
+    };
+  }).sort((a,b)=>a.now-b.now);
+
+  const best = stores[0];
+  const worst = stores[stores.length-1];
+  const spread = worst.now - best.now;
+  const allPrices = rows.map(r=>+r.price);
+  const allTimeLow = Math.min(...allPrices);
+  const avg = allPrices.reduce((a,b)=>a+b,0)/allPrices.length;
+
+  const deltaTag = c => c === null ? '' :
+    c < 0 ? `<span class="delta dn">▼ ${CAD(Math.abs(c))} since last check</span>` :
+    c > 0 ? `<span class="delta up">▲ ${CAD(c)} since last check</span>` :
+            `<span class="delta flat">No change</span>`;
+
+  document.getElementById('view').innerHTML = `
+    <section class="card">
+      <div class="headline">
+        <div>
+          <p class="eyebrow">Best price in Canada</p>
+          <div class="big">${CAD(best.now)}</div>
+          <div class="where">at ${best.name}${best.stock==='no'?' — out of stock':''}</div>
+          ${deltaTag(best.change)}
+        </div>
+        <div class="strip">
+          <p class="eyebrow">What every store is asking</p>
+          <div class="rail" id="rail"></div>
+          <p class="spread-note">
+            ${stores.length} store${stores.length>1?'s':''} · you'd overpay by
+            <strong>${CAD(spread)}</strong> buying at ${worst.name} instead of ${best.name}
+          </p>
+        </div>
+      </div>
+    </section>
+
+    <section class="card">
+      <div class="card-head">
+        <p class="eyebrow">Price history</p>
+        <div class="range" role="group" aria-label="Time range">
+          ${[30,90,365].map(d=>`<button data-days="${d}" aria-pressed="${d===days}">${d===365?'1 year':d+' days'}</button>`).join('')}
+          <button data-days="9999" aria-pressed="${days===9999}">All</button>
+        </div>
+      </div>
+      <div class="chart-box"><canvas id="chart"></canvas></div>
+    </section>
+
+    <section class="card">
+      <p class="eyebrow">Store by store</p>
+      <table>
+        <thead><tr>
+          <th>Store</th><th class="num">Now</th><th class="num">Since last check</th>
+          <th class="num">30-day low</th><th class="num">Its lowest ever</th>
+        </tr></thead>
+        <tbody>${stores.map(s=>`
+          <tr class="${s===best?'is-best':''}">
+            <td><a href="${s.url}" target="_blank" rel="noopener">${s.name}</a>
+                ${s===best?'<span class="flag">BEST</span>':''}
+                ${s.stock==='no'?'<div class="stale">out of stock</div>':''}</td>
+            <td class="num mono">${CAD(s.now)}</td>
+            <td class="num mono" style="color:${s.change<0?'var(--down)':s.change>0?'var(--up)':'var(--muted)'}">
+              ${s.change===null?'—':s.change===0?'flat':(s.change>0?'+':'')+s.change.toFixed(2)}</td>
+            <td class="num mono">${s.low30!==null?CAD(s.low30):'—'}</td>
+            <td class="num mono">${CAD(s.lowAll)}</td>
+          </tr>`).join('')}
+        </tbody>
+      </table>
+    </section>
+
+    <section class="card">
+      <p class="eyebrow">The numbers that matter</p>
+      <dl class="stats">
+        <div class="stat"><dt>Lowest ever seen</dt><dd>${CAD(allTimeLow)}</dd></div>
+        <div class="stat"><dt>Average tracked</dt><dd>${CAD(avg)}</dd></div>
+        <div class="stat"><dt>Today vs lowest</dt>
+          <dd style="color:${best.now<=allTimeLow?'var(--down)':'inherit'}">
+            ${best.now<=allTimeLow?'at the low':'+'+CAD(best.now-allTimeLow).slice(1)}</dd></div>
+        <div class="stat"><dt>Your target</dt><dd>${target?CAD(target):'not set'}</dd></div>
+        <div class="stat"><dt>Checks logged</dt><dd>${rows.length}</dd></div>
+      </dl>
+    </section>`;
+
+  drawRail(stores, best, worst);
+  try {
+    drawChart(stores, target);
+  } catch (e) {
+    document.querySelector('.chart-box').innerHTML =
+      '<p class="stale" style="padding:24px 0">The chart library didn\'t load. ' +
+      'Reload the page — the prices below are unaffected.</p>';
+  }
+
+  document.querySelectorAll('.range button').forEach(b => b.onclick = () => {
+    days = +b.dataset.days; render();
+  });
+}
+
+function drawRail(stores, best, worst){
+  const rail = document.getElementById('rail');
+  const lo = best.now, hi = worst.now, span = (hi - lo) || 1;
+  const width = rail.clientWidth || 520;
+
+  // Place each store on the price scale, then drop it into whichever of the two
+  // label lanes has room. Clustered prices stay readable instead of piling up.
+  const placed = stores.map((s,i) => ({
+    store: s,
+    pct: hi === lo ? (i+1)*100/(stores.length+1) : 7 + ((s.now - lo) / span) * 86
+  })).sort((a,b) => a.pct - b.pct);
+
+  const label = s => s.name.replace(/\s*(Canada|\.ca)$/i,'');
+  const gapFor = p => 100 * (Math.max(label(p.store).length, 9) * 6.6 + 16) / width;
+  const lastIn = [-Infinity, -Infinity];
+
+  placed.forEach(p => {
+    const need = gapFor(p);
+    p.lane = (p.pct - lastIn[0] >= need) ? 0
+           : (p.pct - lastIn[1] >= need) ? 1
+           : (lastIn[0] <= lastIn[1] ? 0 : 1);
+    lastIn[p.lane] = p.pct;
+  });
+
+  rail.innerHTML = placed.map((p,i) => `
+    <div class="tick ${p.store===best?'best':''} ${p.pct<14?'at-start':p.pct>86?'at-end':''}" data-lane="${p.lane}"
+         style="left:${p.pct}%;animation-delay:${i*70}ms">
+      <em>${label(p.store)}</em><i></i><b>${CAD(p.store.now)}</b>
+    </div>`).join('');
+}
+
+function drawChart(stores, target){
+  const cutoff = Date.now() - days*864e5;
+  const datasets = stores.map((s,i) => ({
+    label: s.name,
+    data: s.points.filter(p => p.t >= cutoff).map(p => ({x: p.t, y: p.price})),
+    borderColor: SERIES_COLORS[i % SERIES_COLORS.length],
+    backgroundColor: SERIES_COLORS[i % SERIES_COLORS.length],
+    borderWidth: 2, pointRadius: 2, pointHoverRadius: 5,
+    stepped: 'before', tension: 0
+  }));
+
+  if (target) datasets.push({
+    label: 'Your target', borderColor: '#9c3524', borderDash: [5,4], borderWidth: 1.5,
+    pointRadius: 0, data: datasets.flatMap(d=>d.data).length
+      ? [{x: Math.min(...datasets.flatMap(d=>d.data.map(p=>p.x))), y: target},
+         {x: Date.now(), y: target}] : []
+  });
+
+  if (chart) chart.destroy();
+  chart = new Chart(document.getElementById('chart'), {
+    type: 'line',
+    data: { datasets },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      interaction: { mode: 'nearest', intersect: false },
+      scales: {
+        x: { type: 'time', time: { unit: days<=30?'day':days<=90?'week':'month' },
+             grid: { display:false },
+             ticks: { color:'#69738a', font:{family:'IBM Plex Mono', size:11} } },
+        y: { grid: { color:'#d3d8e0' }, border:{display:false},
+             ticks: { color:'#69738a', font:{family:'IBM Plex Mono', size:11},
+                      callback: v => '$' + v.toLocaleString('en-CA') } }
+      },
+      plugins: {
+        legend: { position:'bottom', labels:{ usePointStyle:true, pointStyle:'line',
+                  boxWidth:22, font:{family:'IBM Plex Sans', size:12}, color:'#14181f' } },
+        tooltip: { callbacks: { label: c => c.dataset.label + ': ' + CAD(c.parsed.y) } }
+      }
+    }
+  });
+}
+
+// ---------------------------------------------------------------- add an item
+
+// Which reader to use per store. 'manual' means the store blocks automated
+// checks and you type the price in yourself.
+const STORES = [
+  [/bestbuy\.ca/,        'Best Buy Canada',  'bestbuy_ca'],
+  [/costco\.ca/,         'Costco Canada',    'manual'],
+  [/walmart\.ca/,        'Walmart Canada',   'manual'],
+  [/amazon\.ca/,         'Amazon.ca',        'jsonld'],
+  [/staples\.ca/,        'Staples Canada',   'jsonld'],
+  [/newegg\.ca/,         'Newegg Canada',    'jsonld'],
+  [/canadacomputers\./,  'Canada Computers', 'jsonld'],
+  [/memoryexpress\./,    'Memory Express',   'jsonld'],
+  [/apple\.com/,         'Apple Canada',     'jsonld'],
+  [/canadiantire\.ca/,   'Canadian Tire',    'jsonld'],
+  [/londondrugs\./,      'London Drugs',     'jsonld'],
+  [/visions\.ca/,        'Visions',          'jsonld'],
+  [/thesource\.ca/,      'The Source',       'jsonld'],
+];
+
+function identify(url){
+  const match = STORES.find(([re]) => re.test(url));
+  if (match) return { retailer: match[1], url, method: match[2] };
+  try {
+    const host = new URL(url).hostname.replace(/^www\./,'');
+    return { retailer: host, url, method: 'jsonld' };   // unknown store, try the standard reader
+  } catch { return null; }
+}
+
+function buildRequest(){
+  const name = document.getElementById('f-name').value.trim();
+  const target = document.getElementById('f-target').value.trim();
+  const urls = document.getElementById('f-urls').value
+    .split(/\s+/).map(s => s.trim()).filter(s => /^https?:\/\//.test(s));
+
+  const sources = urls.map(identify).filter(Boolean);
+  const seen = new Set();
+  const unique = sources.filter(s => !seen.has(s.retailer) && seen.add(s.retailer));
+
+  document.getElementById('f-detected').innerHTML = unique.length
+    ? unique.map(s => `<span class="chip ${s.method==='manual'?'hand':''}">${s.retailer}${
+        s.method==='manual' ? ' · by hand' : ''}</span>`).join('')
+    : (document.getElementById('f-urls').value.trim()
+        ? '<span class="chip bad">No product links found yet — paste full addresses starting with https://</span>'
+        : '');
+
+  const ready = name && unique.length;
+  const go = document.getElementById('f-go');
+  go.setAttribute('aria-disabled', ready ? 'false' : 'true');
+  if (!ready) return null;
+
+  const product = {
+    id: name.toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'').slice(0,40),
+    name,
+    ...(target ? { target_price: Number(target) } : {}),
+    sources: unique
+  };
+
+  const body = `<!-- price-watch-add -->\nAdding **${name}** to the tracker.\n\n`
+    + '```json\n' + JSON.stringify(product, null, 2) + '\n```\n';
+
+  go.href = `https://github.com/${repoPath()}/issues/new?`
+    + `title=${encodeURIComponent('Add: ' + name)}&body=${encodeURIComponent(body)}`;
+
+  return { product, body };
+}
+
+function repoPath(){
+  // On username.github.io/repo/ we can work this out; otherwise fall back.
+  const user = location.hostname.split('.')[0];
+  const repo = location.pathname.split('/').filter(Boolean)[0];
+  return (location.hostname.endsWith('github.io') && repo) ? `${user}/${repo}` : 'YOUR-USERNAME/price-watch';
+}
+
+['f-name','f-target','f-urls'].forEach(id =>
+  document.getElementById(id).addEventListener('input', buildRequest));
+
+document.getElementById('f-copy').onclick = async () => {
+  const built = buildRequest();
+  const said = document.getElementById('f-said');
+  if (!built) { said.textContent = 'Add a name and at least one link first.'; return; }
+  try {
+    await navigator.clipboard.writeText(JSON.stringify(built.product, null, 2));
+    said.textContent = 'Copied — paste it into products.json';
+  } catch {
+    said.textContent = 'Copying blocked. Open products.json and add it by hand.';
+  }
+  setTimeout(() => said.textContent = '', 4000);
+};
+
+if (!location.hostname.endsWith('github.io')) {
+  document.getElementById('f-note').innerHTML =
+    'Viewing this file directly, so the <strong>Add it</strong> button can\'t find your repository. ' +
+    'Use <strong>Copy details instead</strong>, or open the dashboard from its github.io address.';
+}
+
+// Chart.js time scale needs a date adapter
+const adapter = document.createElement('script');
+adapter.src = 'https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns@3.0.0/dist/chartjs-adapter-date-fns.bundle.min.js';
+adapter.onload = boot;
+adapter.onerror = boot;
+document.head.appendChild(adapter);
+</script>
+</body>
+</html>
